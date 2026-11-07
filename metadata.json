@@ -1,0 +1,6 @@
+{
+  "name": "BlocoCerto",
+  "description": "Controle de custos, simulador de vendas e gestão de produção para fábricas de blocos de concreto.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
