@@ -399,7 +399,7 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
                             ? '100 ml por paver (1 L por batelada de 10)'
                             : selectedProductId === 'pingadeira'
                             ? '300 ml por pingadeira (1,2 L por batelada de 4)'
-                            : 'Preparo: 2L pó + 2L areia + 2,5L água (rendimento 6,5 L)'
+                            : 'Preparo: 6 L por R$ 3,17 (~R$ 0,53/L)'
                           : `Consumo em ${MATERIAL_UNITS[mid]}`}
                       </span>
                     </div>

@@ -92,7 +92,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                       {isCement
                         ? 'Custo por batelada via rendimento do saco'
                         : mid === 'slurry'
-                        ? 'Receita: 2L pó de pedra + 2L areia + 2,5L água (rendimento 6,5 L)'
+                        ? 'Preparo de 6 L (R$ 3,17 a embalagem)'
                         : 'Preço compartilhado na produção'}
                     </span>
                   </div>
@@ -174,25 +174,25 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
               Nata de cimento: preparo
             </h2>
             <p className="text-[11.5px] text-[#869c91] mt-1 mb-3 leading-relaxed">
-              Traço: 2 L de pó de pedra + 2 L de areia + 2,5 L de água. Rendimento de 6,5 litros por preparo.
+              6 litros de nata custam R$ 3,17 (~R$ 0,53 por litro).
             </p>
 
             <div className="bg-[#f8faf8] border border-[#edf3ed] rounded-xl p-3 space-y-2 text-[11px] text-[#4d6659] mb-4">
               <div className="flex justify-between items-center">
                 <span>Paver:</span>
-                <strong className="text-[#194b38] font-bold">100 ml / paver (1 L / batelada)</strong>
+                <strong className="text-[#194b38] font-bold">1 L nos 10 pavers (100 ml/paver)</strong>
               </div>
               <div className="flex justify-between items-center">
                 <span>Pingadeira:</span>
-                <strong className="text-[#194b38] font-bold">300 ml / unid (1,2 L / batelada)</strong>
+                <strong className="text-[#194b38] font-bold">1,2 L para 4 pingadeiras (300 ml/unid)</strong>
               </div>
             </div>
           </div>
 
           <div className="p-3.5 rounded-xl bg-[#eff8f3] border border-[#d6ecde] flex items-center justify-between text-[11.5px] text-[#557867]">
-            <span>Custo do preparo (6,5 L)</span>
+            <span>Custo do preparo ({state.materials.slurry.packQty} L)</span>
             <strong className="text-[14px] font-extrabold text-[#157a55]">
-              {brl(slurryCostBase)}
+              {brl(calculateMaterialCost(state.materials, 'slurry', state.materials.slurry.packQty))}
             </strong>
           </div>
         </div>

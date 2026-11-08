@@ -87,8 +87,8 @@ export const DEFAULT_STATE: AppState = {
     slurry: {
       id: 'slurry',
       name: 'Nata de cimento',
-      price: 0.40,
-      packQty: 6.5,
+      price: 3.17,
+      packQty: 6,
       packUnit: 'litros',
     },
     additive: {
@@ -228,16 +228,6 @@ export function calculateMaterialCost(
     const batches = m.batchesPerPack && m.batchesPerPack > 0 ? m.batchesPerPack : 8;
     return (m.price / batches) * (amount / 6);
   }
-  if (id === 'slurry') {
-    // Nata de cimento: 2L pó de pedra + 2L areia + 2,5L água (rendimento 6,5 L)
-    const powderCost = calculateMaterialCost(materials, 'powder', 2);
-    const sandCost = calculateMaterialCost(materials, 'sand', 2);
-    const waterCost = calculateMaterialCost(materials, 'water', 2.5);
-    const recipeCost = powderCost + sandCost + waterCost;
-    const batchCost = recipeCost > 0 ? recipeCost : m.price;
-    const yieldLiters = m.packQty && m.packQty > 0 ? m.packQty : 6.5;
-    return (batchCost / yieldLiters) * amount;
-  }
   const packSize = m.packQty * unitMultiplier(m.packUnit);
   if (packSize <= 0) return 0;
   return (m.price * amount) / packSize;
@@ -368,8 +358,13 @@ export function loadState(): AppState {
     MATERIAL_IDS.forEach((id) => {
       const m = parsed.materials?.[id];
       if (!m) return;
-      if (isNonNegative(m.price)) out.materials[id].price = m.price;
-      if (isPositive(m.packQty)) out.materials[id].packQty = m.packQty;
+      if (id === 'slurry' && (m.price === 0.4 || m.price === 0.402 || m.packQty === 6.5)) {
+        out.materials.slurry.price = 3.17;
+        out.materials.slurry.packQty = 6;
+      } else {
+        if (isNonNegative(m.price)) out.materials[id].price = m.price;
+        if (isPositive(m.packQty)) out.materials[id].packQty = m.packQty;
+      }
       if (id === 'cement' && isPositive(m.batchesPerPack)) {
         out.materials[id].batchesPerPack = m.batchesPerPack;
       }
