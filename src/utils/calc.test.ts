@@ -99,10 +99,88 @@ test('calculateProduction calculates projections correctly', () => {
   assert.equal(r.cementBags, 200 / 8); // 25 bags
 });
 
+test('nata de cimento preparation cost reflects stone powder and sand ingredients', () => {
+  const materials = DEFAULT_STATE.materials;
+  // 2L powder (115 * 2 / 1000 = 0.23) + 2L sand (86 * 2 / 1000 = 0.172) = 0.402 for 6.5L
+  const fullPrepCost = calculateMaterialCost(materials, 'slurry', 6.5);
+  assert.ok(Math.abs(fullPrepCost - 0.402) < 0.001);
+
+  // 1L cost = 0.402 / 6.5 ~= 0.061846
+  const cost1L = calculateMaterialCost(materials, 'slurry', 1.0);
+  assert.ok(Math.abs(cost1L - 0.061846) < 0.001);
+
+  // 1.2L cost = 1.2 * (0.402 / 6.5) ~= 0.074215
+  const cost1_2L = calculateMaterialCost(materials, 'slurry', 1.2);
+  assert.ok(Math.abs(cost1_2L - 0.074215) < 0.001);
+});
+
+test('paver 16 faces calculates traço 3x3x1 plus 1L nata de cimento (100ml/paver) accurately', () => {
+  const paver = DEFAULT_STATE.products.paver16;
+  assert.equal(paver.blocksPerBatch, 10);
+  assert.equal(paver.recipe.cement, 4);
+  assert.equal(paver.recipe.gravel0, 12);
+  assert.equal(paver.recipe.powder, 12);
+  assert.equal(paver.recipe.slurry, 1.0);
+
+  // Gravel 0 cost: 220 * 12 / 1000 = 2.64
+  const gravelCost = calculateMaterialCost(DEFAULT_STATE.materials, 'gravel0', 12);
+  assert.equal(gravelCost, 2.64);
+
+  // Cement 4L cost: (54 / 8) * (4 / 6) = 4.50
+  const cementCost = calculateMaterialCost(DEFAULT_STATE.materials, 'cement', 4);
+  assert.equal(cementCost, 4.5);
+
+  const result = calculateProduct(paver, DEFAULT_STATE.materials, 10);
+  // Subtotal = 8.802 + 0.061846 = 8.863846
+  assert.ok(Math.abs(result.subtotal - 8.8638) < 0.002);
+  // Maintenance 10%: 0.88638
+  assert.ok(Math.abs(result.maintenance - 0.8864) < 0.002);
+  // Freight 20%: 1.77277
+  assert.ok(Math.abs(result.freight - 1.7728) < 0.002);
+  // Batch total = 11.523
+  assert.ok(Math.abs(result.batch - 11.523) < 0.005);
+  // Unit cost for 10 pavers = 1.1523
+  assert.ok(result.unit !== null);
+  assert.ok(Math.abs((result.unit || 0) - 1.1523) < 0.002);
+  // Profit = 2.00 - 1.1523 = 0.8477
+  assert.ok(result.profit !== null);
+  assert.ok(Math.abs((result.profit || 0) - 0.8477) < 0.002);
+});
+
+test('pingadeira calculates traço 5x1 plus 1.2L nata de cimento (300ml/pingadeira) accurately', () => {
+  const pingadeira = DEFAULT_STATE.products.pingadeira;
+  assert.equal(pingadeira.blocksPerBatch, 4);
+  assert.equal(pingadeira.recipe.cement, 5);
+  assert.equal(pingadeira.recipe.sand, 7);
+  assert.equal(pingadeira.recipe.powder, 12);
+  assert.equal(pingadeira.recipe.gravel0, 8);
+  assert.equal(pingadeira.recipe.slurry, 1.2);
+  assert.equal(pingadeira.freightPercent, 20);
+
+  const result = calculateProduct(pingadeira, DEFAULT_STATE.materials, 10);
+  // Subtotal = 9.649 + 0.074215 = 9.7232
+  assert.ok(Math.abs(result.subtotal - 9.7232) < 0.002);
+  // Maintenance 10% = 0.97232
+  assert.ok(Math.abs(result.maintenance - 0.9723) < 0.002);
+  // Freight 20% = 1.94464
+  assert.ok(Math.abs(result.freight - 1.9446) < 0.002);
+  // Batch total = 12.6402
+  assert.ok(Math.abs(result.batch - 12.6402) < 0.005);
+  // Unit cost for 4 units = 3.1600
+  assert.ok(result.unit !== null);
+  assert.ok(Math.abs((result.unit || 0) - 3.16) < 0.002);
+  // Profit = 6.00 - 3.16 = 2.84
+  assert.ok(result.profit !== null);
+  assert.ok(Math.abs((result.profit || 0) - 2.84) < 0.002);
+});
+
 test('generateCsv generates non-empty CSV with BOM and correct delimiter', () => {
   const csv = generateCsv(DEFAULT_STATE, DEFAULT_SIM);
   assert.ok(csv.startsWith('\ufeff'));
   assert.ok(csv.includes('Cimento CP-V'));
-  assert.ok(csv.includes('Bloco de 14'));
+  assert.ok(csv.includes('Brita 0'));
+  assert.ok(csv.includes('Nata de cimento'));
+  assert.ok(csv.includes('Paver Paviesse (16 faces)'));
+  assert.ok(csv.includes('Pingadeira'));
   assert.ok(csv.includes(';'));
 });

@@ -18,8 +18,10 @@ interface MaterialsViewProps {
 
 const MATERIAL_EMOJIS: Record<MaterialId, string> = {
   cement: '▦',
+  gravel0: '◬',
   powder: '◈',
   sand: '◫',
+  slurry: '◍',
   additive: '◉',
   energy: 'ϟ',
   grease: '◧',
@@ -33,6 +35,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
   onNavigate,
 }) => {
   const cementCostBase = calculateMaterialCost(state.materials, 'cement', 6);
+  const slurryCostBase = calculateMaterialCost(state.materials, 'slurry', 6.5);
   const p14Calc = calculateProduct(
     state.products.bloco14,
     state.materials,
@@ -88,6 +91,8 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
                     <span className="text-[10px] text-[#97a89f] block">
                       {isCement
                         ? 'Custo por batelada via rendimento do saco'
+                        : mid === 'slurry'
+                        ? 'Receita: 2L pó de pedra + 2L areia + 2,5L água (rendimento 6,5 L)'
                         : 'Preço compartilhado na produção'}
                     </span>
                   </div>
@@ -127,8 +132,8 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
         </div>
       </div>
 
-      {/* Two cards: Cement Sack Yield + Maintenance */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Three cards: Cement Sack Yield + Slurry Recipe + Maintenance */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Cement Sack Yield Card */}
         <div className="bg-white border border-[#e4ebe7] rounded-2xl p-6 shadow-2xs flex flex-col justify-between">
           <div>
@@ -136,7 +141,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
               Cimento: rendimento por saco
             </h2>
             <p className="text-[11.5px] text-[#869c91] mt-1 mb-4 leading-relaxed">
-              O consumo-base é 6 litros por batelada e 8 bateladas por saco. Alterar o volume na receita ajusta o custo proporcionalmente, sem converter litros em quilogramas.
+              O consumo-base é 6 litros por batelada e 8 bateladas por saco. O custo se ajusta proporcionalmente ao volume da receita.
             </p>
 
             <div className="space-y-1.5 mb-5">
@@ -155,9 +160,39 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
           </div>
 
           <div className="p-3.5 rounded-xl bg-[#eff8f3] border border-[#d6ecde] flex items-center justify-between text-[11.5px] text-[#557867]">
-            <span>Custo para 6 litros de cimento</span>
+            <span>Custo para 6 L de cimento</span>
             <strong className="text-[14px] font-extrabold text-[#157a55]">
               {brl(cementCostBase)}
+            </strong>
+          </div>
+        </div>
+
+        {/* Slurry Recipe Card */}
+        <div className="bg-white border border-[#e4ebe7] rounded-2xl p-6 shadow-2xs flex flex-col justify-between">
+          <div>
+            <h2 className="text-[16px] font-bold text-[#1a382d] tracking-tight">
+              Nata de cimento: preparo
+            </h2>
+            <p className="text-[11.5px] text-[#869c91] mt-1 mb-3 leading-relaxed">
+              Traço: 2 L de pó de pedra + 2 L de areia + 2,5 L de água. Rendimento de 6,5 litros por preparo.
+            </p>
+
+            <div className="bg-[#f8faf8] border border-[#edf3ed] rounded-xl p-3 space-y-2 text-[11px] text-[#4d6659] mb-4">
+              <div className="flex justify-between items-center">
+                <span>Paver:</span>
+                <strong className="text-[#194b38] font-bold">100 ml / paver (1 L / batelada)</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Pingadeira:</span>
+                <strong className="text-[#194b38] font-bold">300 ml / unid (1,2 L / batelada)</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#eff8f3] border border-[#d6ecde] flex items-center justify-between text-[11.5px] text-[#557867]">
+            <span>Custo do preparo (6,5 L)</span>
+            <strong className="text-[14px] font-extrabold text-[#157a55]">
+              {brl(slurryCostBase)}
             </strong>
           </div>
         </div>
@@ -169,7 +204,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
               Manutenção da máquina
             </h2>
             <p className="text-[11.5px] text-[#869c91] mt-1 mb-4 leading-relaxed">
-              Percentual aplicado ao custo dos materiais e extras por batelada para depreciação e manutenção preventiva do maquinário.
+              Percentual aplicado ao custo dos materiais e extras por batelada para depreciação e manutenção preventiva.
             </p>
 
             <div className="space-y-1.5 mb-5">

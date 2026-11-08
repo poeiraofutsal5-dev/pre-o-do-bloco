@@ -47,8 +47,8 @@ export const CostControlView: React.FC<CostControlViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 3 Main Product KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* Product KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {PRODUCT_IDS.map((pid) => {
           const product = state.products[pid];
           const calc = calculateProduct(

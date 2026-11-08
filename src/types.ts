@@ -1,13 +1,20 @@
 export type MaterialId =
   | 'cement'
+  | 'gravel0'
   | 'powder'
   | 'sand'
+  | 'slurry'
   | 'additive'
   | 'energy'
   | 'grease'
   | 'water';
 
-export type ProductId = 'bloco14' | 'canaleta' | 'bloco9';
+export type ProductId =
+  | 'bloco14'
+  | 'canaleta'
+  | 'bloco9'
+  | 'paver16'
+  | 'pingadeira';
 
 export type SectionId =
   | 'inicio'
@@ -21,7 +28,7 @@ export interface Material {
   name: string;
   price: number;
   packQty: number;
-  packUnit: 'kg' | 'm3' | 'kWh';
+  packUnit: 'kg' | 'm3' | 'kWh' | 'litros';
   batchesPerPack?: number; // specific to cement
 }
 
@@ -34,6 +41,7 @@ export interface Product {
   blocksPerBatch: number | null;
   salePrice: number | null;
   extraCost: number;
+  freightPercent?: number;
   recipe: RecipeMap;
 }
 
@@ -63,6 +71,7 @@ export interface ProductCalcResult {
   lines: MaterialCostLine[];
   subtotal: number;
   maintenance: number;
+  freight: number;
   batch: number;
   unit: number | null;
   profit: number | null;

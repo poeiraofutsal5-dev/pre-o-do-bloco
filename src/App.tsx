@@ -42,11 +42,11 @@ const SECTION_PAGE_HEADINGS: Record<SectionId, string> = {
 };
 
 const SECTION_SUBTITLES: Record<SectionId, string> = {
-  inicio: 'Escolha o tipo de bloco, arraste a barra de preço e acompanhe seu lucro.',
-  produtos: 'Acompanhe os custos, as margens e os resultados dos três blocos.',
+  inicio: 'Escolha o tipo de bloco, paver ou pingadeira, arraste a barra de preço e acompanhe seu lucro.',
+  produtos: 'Acompanhe os custos, as margens e os resultados dos blocos, pavers e pingadeiras.',
   materiais: 'Altere preços e embalagens. Todos os produtos serão atualizados.',
   producao: 'Planeje sua produção sem modificar os valores cadastrados.',
-  comparativo: 'Compare os três produtos usando os preços e custos atuais.',
+  comparativo: 'Compare todos os produtos usando os preços e custos atuais.',
 };
 
 export default function App() {
@@ -71,7 +71,7 @@ export default function App() {
 
   const handleUpdateProduct = (
     id: ProductId,
-    field: 'blocksPerBatch' | 'salePrice' | 'extraCost',
+    field: 'blocksPerBatch' | 'salePrice' | 'extraCost' | 'freightPercent',
     value: number | null
   ) => {
     setState((prev) => {
@@ -82,6 +82,8 @@ export default function App() {
         next.products[id].salePrice = value;
       } else if (field === 'extraCost') {
         next.products[id].extraCost = value ?? 0;
+      } else if (field === 'freightPercent') {
+        next.products[id].freightPercent = value ?? 0;
       }
       return next;
     });

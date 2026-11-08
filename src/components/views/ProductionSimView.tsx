@@ -267,14 +267,14 @@ export const ProductionSimView: React.FC<ProductionSimViewProps> = ({
                 </tr>
               ))}
               <tr className="bg-[#fcfdfc] font-bold text-[#446251]">
-                <td className="py-3 px-4">Manutenção e custo adicional</td>
+                <td className="py-3 px-4">Manutenção, frete e custos adicionais</td>
                 <td className="py-3 px-4 text-right">
-                  {brl(r.calc.maintenance + r.product.extraCost)}
+                  {brl(r.calc.maintenance + r.calc.freight + r.product.extraCost)}
                 </td>
                 <td className="py-3 px-4 text-right text-[#889d91]">—</td>
                 <td className="py-3 px-4 text-right text-[#177a54]">
                   {r.isValid
-                    ? brl((r.calc.maintenance + r.product.extraCost) * r.totalBatches)
+                    ? brl((r.calc.maintenance + r.calc.freight + r.product.extraCost) * r.totalBatches)
                     : '—'}
                 </td>
               </tr>

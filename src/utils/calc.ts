@@ -11,20 +11,30 @@ import {
 
 export const MATERIAL_IDS: MaterialId[] = [
   'cement',
+  'gravel0',
   'powder',
   'sand',
+  'slurry',
   'additive',
   'energy',
   'grease',
   'water',
 ];
 
-export const PRODUCT_IDS: ProductId[] = ['bloco14', 'canaleta', 'bloco9'];
+export const PRODUCT_IDS: ProductId[] = [
+  'bloco14',
+  'canaleta',
+  'bloco9',
+  'paver16',
+  'pingadeira',
+];
 
 export const MATERIAL_UNITS: Record<MaterialId, string> = {
   cement: 'litros',
+  gravel0: 'litros',
   powder: 'litros',
   sand: 'litros',
+  slurry: 'litros',
   additive: 'g',
   energy: 'kWh',
   grease: 'g',
@@ -33,8 +43,10 @@ export const MATERIAL_UNITS: Record<MaterialId, string> = {
 
 export const DEFAULT_RECIPE: Record<MaterialId, number> = {
   cement: 6,
+  gravel0: 0,
   powder: 12,
   sand: 36,
+  slurry: 0,
   additive: 2.5,
   energy: 0.152,
   grease: 11,
@@ -51,6 +63,13 @@ export const DEFAULT_STATE: AppState = {
       packUnit: 'kg',
       batchesPerPack: 8,
     },
+    gravel0: {
+      id: 'gravel0',
+      name: 'Brita 0',
+      price: 220,
+      packQty: 1,
+      packUnit: 'm3',
+    },
     powder: {
       id: 'powder',
       name: 'Pó de pedra',
@@ -64,6 +83,13 @@ export const DEFAULT_STATE: AppState = {
       price: 86,
       packQty: 1,
       packUnit: 'm3',
+    },
+    slurry: {
+      id: 'slurry',
+      name: 'Nata de cimento',
+      price: 0.40,
+      packQty: 6.5,
+      packUnit: 'litros',
     },
     additive: {
       id: 'additive',
@@ -103,6 +129,7 @@ export const DEFAULT_STATE: AppState = {
       blocksPerBatch: 8,
       salePrice: 3.6,
       extraCost: 0,
+      freightPercent: 0,
       recipe: { ...DEFAULT_RECIPE },
     },
     canaleta: {
@@ -112,6 +139,7 @@ export const DEFAULT_STATE: AppState = {
       blocksPerBatch: 8,
       salePrice: 3.6,
       extraCost: 0,
+      freightPercent: 0,
       recipe: { ...DEFAULT_RECIPE },
     },
     bloco9: {
@@ -121,7 +149,42 @@ export const DEFAULT_STATE: AppState = {
       blocksPerBatch: null,
       salePrice: null,
       extraCost: 0,
+      freightPercent: 0,
       recipe: { ...DEFAULT_RECIPE },
+    },
+    paver16: {
+      id: 'paver16',
+      name: 'Paver Paviesse (16 faces)',
+      label: '16 faces · Traço 3×3×1',
+      blocksPerBatch: 10,
+      salePrice: 2.0,
+      extraCost: 0,
+      freightPercent: 20,
+      recipe: {
+        ...DEFAULT_RECIPE,
+        cement: 4,
+        gravel0: 12,
+        powder: 12,
+        sand: 0,
+        slurry: 1.0, // 100 ml por paver × 10 pavers = 1000 ml = 1,0 L
+      },
+    },
+    pingadeira: {
+      id: 'pingadeira',
+      name: 'Pingadeira',
+      label: 'Traço 5×1',
+      blocksPerBatch: 4,
+      salePrice: 6.0,
+      extraCost: 0,
+      freightPercent: 20,
+      recipe: {
+        ...DEFAULT_RECIPE,
+        cement: 5,
+        sand: 7,
+        powder: 12,
+        gravel0: 8,
+        slurry: 1.2, // 300 ml por pingadeira × 4 pingadeiras = 1200 ml = 1,2 L
+      },
     },
   },
 };
@@ -165,6 +228,16 @@ export function calculateMaterialCost(
     const batches = m.batchesPerPack && m.batchesPerPack > 0 ? m.batchesPerPack : 8;
     return (m.price / batches) * (amount / 6);
   }
+  if (id === 'slurry') {
+    // Nata de cimento: 2L pó de pedra + 2L areia + 2,5L água (rendimento 6,5 L)
+    const powderCost = calculateMaterialCost(materials, 'powder', 2);
+    const sandCost = calculateMaterialCost(materials, 'sand', 2);
+    const waterCost = calculateMaterialCost(materials, 'water', 2.5);
+    const recipeCost = powderCost + sandCost + waterCost;
+    const batchCost = recipeCost > 0 ? recipeCost : m.price;
+    const yieldLiters = m.packQty && m.packQty > 0 ? m.packQty : 6.5;
+    return (batchCost / yieldLiters) * amount;
+  }
   const packSize = m.packQty * unitMultiplier(m.packUnit);
   if (packSize <= 0) return 0;
   return (m.price * amount) / packSize;
@@ -190,7 +263,8 @@ export function calculateProduct(
   const subtotal =
     lines.reduce((acc, line) => acc + line.cost, 0) + (product.extraCost || 0);
   const maintenance = (subtotal * (maintenancePercent || 0)) / 100;
-  const batch = subtotal + maintenance;
+  const freight = (subtotal * (product.freightPercent || 0)) / 100;
+  const batch = subtotal + maintenance + freight;
 
   const unit =
     isPositive(product.blocksPerBatch)
@@ -211,6 +285,7 @@ export function calculateProduct(
     lines,
     subtotal,
     maintenance,
+    freight,
     batch,
     unit,
     profit,
@@ -319,9 +394,20 @@ export function loadState(): AppState {
       if (isNonNegative(p.extraCost)) {
         out.products[id].extraCost = p.extraCost;
       }
+      if (isNonNegative(p.freightPercent)) {
+        out.products[id].freightPercent = p.freightPercent;
+      } else if (id === 'paver16' || id === 'pingadeira') {
+        out.products[id].freightPercent = 20;
+      } else {
+        out.products[id].freightPercent = 0;
+      }
       MATERIAL_IDS.forEach((mid) => {
         if (isNonNegative(p.recipe?.[mid])) {
           out.products[id].recipe[mid] = p.recipe[mid];
+        } else if (mid === 'slurry') {
+          if (id === 'paver16') out.products[id].recipe.slurry = 1.0;
+          else if (id === 'pingadeira') out.products[id].recipe.slurry = 1.2;
+          else out.products[id].recipe.slurry = 0;
         }
       });
     });
@@ -397,6 +483,8 @@ export function generateCsv(state: AppState, sim: ProductionSim): string {
       p.salePrice ?? '',
       'R$',
     ]);
+    rows.push(['Produto', p.name, 'Frete', p.freightPercent ?? 0, '%']);
+    rows.push(['Produto', p.name, 'Custo de frete por batelada', c.freight, 'R$']);
     rows.push(['Produto', p.name, 'Custo por batelada', c.batch, 'R$']);
     rows.push(['Produto', p.name, 'Custo por bloco', c.unit ?? '', 'R$']);
     rows.push(['Produto', p.name, 'Lucro por bloco', c.profit ?? '', 'R$']);

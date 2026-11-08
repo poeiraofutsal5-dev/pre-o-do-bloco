@@ -39,6 +39,10 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
           : `${num(x.product.blocksPerBatch, 0)}`,
     },
     {
+      title: 'Frete (%)',
+      getValue: (x) => `${num(x.product.freightPercent ?? 0)}%`,
+    },
+    {
       title: 'Custo por batelada',
       getValue: (x) => brl(x.calc.batch),
     },

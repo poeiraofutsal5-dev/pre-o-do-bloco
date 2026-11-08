@@ -22,7 +22,7 @@ interface SalesSimulatorViewProps {
   onSelectProduct: (id: ProductId) => void;
   onUpdateProduct: (
     id: ProductId,
-    field: 'blocksPerBatch' | 'salePrice' | 'extraCost',
+    field: 'blocksPerBatch' | 'salePrice' | 'extraCost' | 'freightPercent',
     value: number | null
   ) => void;
   onUpdateRecipe: (
@@ -282,27 +282,45 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[11.5px] font-bold text-[#4c6257] block">
-                  Blocos produzidos por batelada
+                  Produzidos por batelada
                 </label>
                 <NumericInput
                   value={currentProduct.blocksPerBatch}
                   onChange={(val) => onUpdateProduct(selectedProductId, 'blocksPerBatch', val)}
                   isInteger={true}
-                  suffix="blocos"
-                  placeholder="Informe a quantidade"
+                  suffix="unid"
+                  placeholder="Informe"
                   ariaLabel="Blocos produzidos por batelada"
                 />
                 <p className="text-[10px] text-[#91a49a] leading-tight">
-                  Altere livremente. O custo por bloco será recalculado.
+                  Altere livremente.
                 </p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[11.5px] font-bold text-[#4c6257] block">
-                  Custos adicionais por batelada
+                  Frete (%)
+                </label>
+                <NumericInput
+                  value={currentProduct.freightPercent ?? 0}
+                  onChange={(val) => onUpdateProduct(selectedProductId, 'freightPercent', val ?? 0)}
+                  suffix="%"
+                  placeholder="0"
+                  ariaLabel="Percentual de frete"
+                />
+                <p className="text-[10px] text-[#91a49a] leading-tight">
+                  {(currentProduct.freightPercent ?? 0) > 0
+                    ? `${num(currentProduct.freightPercent ?? 0)}% sobre o subtotal`
+                    : 'Sem taxa de frete'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11.5px] font-bold text-[#4c6257] block">
+                  Custos adicionais
                 </label>
                 <NumericInput
                   value={currentProduct.extraCost}
@@ -312,7 +330,7 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
                   ariaLabel="Custos adicionais por batelada"
                 />
                 <p className="text-[10px] text-[#91a49a] leading-tight">
-                  Despesas específicas deste produto, antes da manutenção.
+                  Por batelada, antes da manutenção.
                 </p>
               </div>
             </div>
@@ -376,6 +394,12 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
                       <span className="text-[10px] text-[#9caaa2]">
                         {mid === 'cement'
                           ? 'Volume; custo calculado pelo rendimento do saco'
+                          : mid === 'slurry'
+                          ? selectedProductId === 'paver16'
+                            ? '100 ml por paver (1 L por batelada de 10)'
+                            : selectedProductId === 'pingadeira'
+                            ? '300 ml por pingadeira (1,2 L por batelada de 4)'
+                            : 'Preparo: 2L pó + 2L areia + 2,5L água (rendimento 6,5 L)'
                           : `Consumo em ${MATERIAL_UNITS[mid]}`}
                       </span>
                     </div>
@@ -417,6 +441,14 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
                   {brl(calc.maintenance)}
                 </strong>
               </div>
+              {(currentProduct.freightPercent ?? 0) > 0 && (
+                <div className="flex justify-between items-center">
+                  <span>Frete ({num(currentProduct.freightPercent ?? 0)}%)</span>
+                  <strong className="text-[#3d5949] font-bold">
+                    {brl(calc.freight)}
+                  </strong>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-3 border-t border-[#e8eeea] text-[13px] text-[#244b39] font-bold">
                 <span>Total por batelada</span>
                 <strong className="text-[18px] font-extrabold text-[#067b52]">
