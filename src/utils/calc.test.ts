@@ -9,16 +9,30 @@ import {
   generateCsv,
 } from './calc';
 
-test('cement cost calculation respects bag price and batchesPerPack ratio', () => {
+test('cement cost calculation respects 48 liters per sack and batchesPerPack', () => {
   const materials = DEFAULT_STATE.materials;
-  // Cimento CP-V: price 54, batchesPerPack 8, recipe cement 6
-  // (54 / 8) * (6 / 6) = 6.75
-  const cost = calculateMaterialCost(materials, 'cement', 6);
-  assert.equal(cost, 6.75);
+  assert.equal(materials.cement.packQty, 48);
+  assert.equal(materials.cement.packUnit, 'litros');
 
-  // If recipe uses 12L cement instead of 6L:
-  const cost12 = calculateMaterialCost(materials, 'cement', 12);
-  assert.equal(cost12, 13.5);
+  // 1 liter cost: 54 / 48 = 1.125
+  const cost1L = calculateMaterialCost(materials, 'cement', 1);
+  assert.equal(cost1L, 54 / 48);
+
+  // 4L for paver: 4 * 1.125 = 4.50
+  const cost4L = calculateMaterialCost(materials, 'cement', 4);
+  assert.equal(cost4L, 4.5);
+
+  // 5L for pingadeira: 5 * 1.125 = 5.625
+  const cost5L = calculateMaterialCost(materials, 'cement', 5);
+  assert.equal(cost5L, 5.625);
+
+  // 7 batches per sack (bloco14): 54 / 7 = 7.7142857...
+  const costBloco = calculateMaterialCost(materials, 'cement', 48 / 7, 7);
+  assert.ok(Math.abs(costBloco - 54 / 7) < 0.001);
+
+  // 6 batches per sack (canaleta): 54 / 6 = 9.00
+  const costCanaleta = calculateMaterialCost(materials, 'cement', 8, 6);
+  assert.equal(costCanaleta, 9.0);
 });
 
 test('aggregate and additive costs respect package size and volume/weight conversions', () => {
@@ -36,48 +50,83 @@ test('aggregate and additive costs respect package size and volume/weight conver
   assert.equal(addCost, 0.075);
 });
 
-test('calculateProduct produces accurate subtotal, maintenance, unit cost and profit', () => {
+test('calculateProduct produces accurate subtotal, maintenance, unit cost and profit for bloco14', () => {
   const p14 = DEFAULT_STATE.products.bloco14;
+  assert.equal(p14.blocksPerBatch, 9);
   const result = calculateProduct(p14, DEFAULT_STATE.materials, 10);
 
   // Subtotal of lines:
-  // cement: 6.75
+  // cement: 7.7142857
   // powder: 1.38
   // sand: 3.096
   // additive: 0.075
   // energy: 50 * 0.152 / 50 = 0.152
   // grease: 50 * 11 / 10000 = 0.055
   // water: 0
-  // Sum = 6.75 + 1.38 + 3.096 + 0.075 + 0.152 + 0.055 = 11.508
-  assert.ok(Math.abs(result.subtotal - 11.508) < 0.001);
+  // Sum = 12.4722857
+  assert.ok(Math.abs(result.subtotal - 12.4723) < 0.002);
 
-  // Maintenance 10%: 1.1508
-  assert.ok(Math.abs(result.maintenance - 1.1508) < 0.001);
+  // Maintenance 10%: 1.2472
+  assert.ok(Math.abs(result.maintenance - 1.2472) < 0.002);
 
-  // Batch total: 11.508 + 1.1508 = 12.6588
-  assert.ok(Math.abs(result.batch - 12.6588) < 0.001);
+  // Batch total: 13.7195
+  assert.ok(Math.abs(result.batch - 13.7195) < 0.005);
 
-  // Unit cost (8 blocks/batch): 12.6588 / 8 = 1.58235
+  // Unit cost (9 blocks/batch): 13.7195 / 9 = 1.5244
   assert.ok(result.unit !== null);
-  assert.ok(Math.abs((result.unit || 0) - 1.58235) < 0.001);
+  assert.ok(Math.abs((result.unit || 0) - 1.5244) < 0.002);
 
-  // Profit (salePrice = 3.60): 3.60 - 1.58235 = 2.01765
+  // Profit (salePrice = 3.60): 3.60 - 1.5244 = 2.0756
   assert.ok(result.profit !== null);
-  assert.ok(Math.abs((result.profit || 0) - 2.01765) < 0.001);
+  assert.ok(Math.abs((result.profit || 0) - 2.0756) < 0.002);
 
-  // Margin: (2.01765 / 3.60) * 100 ~= 56.045%
+  // Margin: (2.0756 / 3.60) * 100 ~= 57.65%
   assert.ok(result.margin !== null);
-  assert.ok(Math.abs((result.margin || 0) - 56.045) < 0.1);
+  assert.ok(Math.abs((result.margin || 0) - 57.65) < 0.2);
 });
 
-test('bloco9 handles pending yield/price gracefully with null outputs', () => {
+test('bloco9 calculates yield of 10 blocks per batch accurately', () => {
   const p9 = DEFAULT_STATE.products.bloco9;
+  assert.equal(p9.blocksPerBatch, 10);
   const result = calculateProduct(p9, DEFAULT_STATE.materials, 10);
 
-  assert.equal(result.unit, null);
-  assert.equal(result.profit, null);
-  assert.equal(result.margin, null);
+  assert.ok(result.unit !== null);
+  assert.ok(Math.abs((result.unit || 0) - 1.372) < 0.002);
+  assert.ok(result.profit !== null);
+  assert.ok(result.margin !== null);
   assert.ok(result.batch > 0);
+});
+
+test('canaleta calculates 6 batches per cement sack and 9 units per batch accurately', () => {
+  const canaleta = DEFAULT_STATE.products.canaleta;
+  assert.equal(canaleta.blocksPerBatch, 9);
+  assert.equal(canaleta.cementBatchesPerPack, 6);
+
+  // Cement cost for canaleta (6 batches per sack of R$ 54): 54 / 6 = 9.00
+  const cementCost = calculateMaterialCost(
+    DEFAULT_STATE.materials,
+    'cement',
+    6,
+    canaleta.cementBatchesPerPack
+  );
+  assert.equal(cementCost, 9.0);
+
+  const result = calculateProduct(canaleta, DEFAULT_STATE.materials, 10);
+  // Subtotal: 9.00 + 1.38 + 3.096 + 0.075 + 0.152 + 0.055 = 13.758
+  assert.ok(Math.abs(result.subtotal - 13.758) < 0.002);
+  // Maintenance 10%: 1.3758
+  assert.ok(Math.abs(result.maintenance - 1.3758) < 0.002);
+  // Batch total: 15.1338
+  assert.ok(Math.abs(result.batch - 15.1338) < 0.005);
+  // Unit cost (9 units/batch): 15.1338 / 9 = 1.6815
+  assert.ok(result.unit !== null);
+  assert.ok(Math.abs((result.unit || 0) - 1.6815) < 0.002);
+  // Profit (salePrice = 3.60): 3.60 - 1.6815 = 1.9185
+  assert.ok(result.profit !== null);
+  assert.ok(Math.abs((result.profit || 0) - 1.9185) < 0.002);
+  // Margin: (1.9185 / 3.60) * 100 ~= 53.29%
+  assert.ok(result.margin !== null);
+  assert.ok(Math.abs((result.margin || 0) - 53.29) < 0.1);
 });
 
 test('calculateProduction calculates projections correctly', () => {
@@ -91,12 +140,12 @@ test('calculateProduction calculates projections correctly', () => {
 
   assert.equal(r.isValid, true);
   assert.equal(r.totalBatches, 200); // 10 * 20
-  assert.equal(r.totalBlocks, 1600); // 200 * 8
+  assert.equal(r.totalBlocks, 1800); // 200 * 9
   assert.ok(r.totalCost !== null);
   assert.ok(r.totalRevenue !== null);
-  assert.equal(r.totalRevenue, 1600 * 3.6); // 5760
+  assert.equal(r.totalRevenue, 1800 * 3.6); // 6480
   assert.ok(r.cementBags !== null);
-  assert.equal(r.cementBags, 200 / 8); // 25 bags
+  assert.ok(Math.abs((r.cementBags || 0) - 200 / 7) < 0.01);
 });
 
 test('nata de cimento preparation cost is R$ 3,17 for 6 liters', () => {
@@ -126,7 +175,7 @@ test('paver 16 faces calculates traço 3x3x1 plus 1L nata de cimento (100ml/pave
   const gravelCost = calculateMaterialCost(DEFAULT_STATE.materials, 'gravel0', 12);
   assert.equal(gravelCost, 2.64);
 
-  // Cement 4L cost: (54 / 8) * (4 / 6) = 4.50
+  // Cement 4L cost with 48L bag: 4 * (54 / 48) = 4.50
   const cementCost = calculateMaterialCost(DEFAULT_STATE.materials, 'cement', 4);
   assert.equal(cementCost, 4.5);
 
@@ -135,11 +184,11 @@ test('paver 16 faces calculates traço 3x3x1 plus 1L nata de cimento (100ml/pave
   assert.ok(Math.abs(slurryCost - 3.17 / 6) < 0.001);
 
   const result = calculateProduct(paver, DEFAULT_STATE.materials, 10);
-  // Subtotal = 8.802 + 0.528333 = 9.330333
+  // Subtotal = 4.50 + 2.64 + 1.38 + 0.528333 + 0.075 + 0.152 + 0.055 = 9.33033
   assert.ok(Math.abs(result.subtotal - 9.3303) < 0.002);
-  // Maintenance 10%: 0.933033
+  // Maintenance 10%: 0.9330
   assert.ok(Math.abs(result.maintenance - 0.9330) < 0.002);
-  // Freight 20%: 1.866067
+  // Freight 20%: 1.8661
   assert.ok(Math.abs(result.freight - 1.8661) < 0.002);
   // Batch total = 12.1294
   assert.ok(Math.abs(result.batch - 12.1294) < 0.005);
@@ -161,12 +210,16 @@ test('pingadeira calculates traço 5x1 plus 1.2L nata de cimento (300ml/pingadei
   assert.equal(pingadeira.recipe.slurry, 1.2);
   assert.equal(pingadeira.freightPercent, 20);
 
+  // Cement 5L cost with 48L bag: 5 * (54 / 48) = 5.625
+  const cementCost = calculateMaterialCost(DEFAULT_STATE.materials, 'cement', 5);
+  assert.equal(cementCost, 5.625);
+
   // Slurry 1.2L cost: 1.2 * (3.17 / 6) = 0.634
   const slurryCost = calculateMaterialCost(DEFAULT_STATE.materials, 'slurry', 1.2);
   assert.ok(Math.abs(slurryCost - 0.634) < 0.001);
 
   const result = calculateProduct(pingadeira, DEFAULT_STATE.materials, 10);
-  // Subtotal = 9.649 + 0.634 = 10.283
+  // Subtotal = 5.625 + 0.602 + 1.38 + 1.76 + 0.634 + 0.075 + 0.152 + 0.055 = 10.283
   assert.ok(Math.abs(result.subtotal - 10.283) < 0.002);
   // Maintenance 10% = 1.0283
   assert.ok(Math.abs(result.maintenance - 1.0283) < 0.002);

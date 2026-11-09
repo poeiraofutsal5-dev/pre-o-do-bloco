@@ -42,7 +42,7 @@ export const MATERIAL_UNITS: Record<MaterialId, string> = {
 };
 
 export const DEFAULT_RECIPE: Record<MaterialId, number> = {
-  cement: 6,
+  cement: 48 / 7, // ~6,857 L por traço (7 traços por saco de 48 L)
   gravel0: 0,
   powder: 12,
   sand: 36,
@@ -59,9 +59,9 @@ export const DEFAULT_STATE: AppState = {
       id: 'cement',
       name: 'Cimento CP-V',
       price: 54,
-      packQty: 50,
-      packUnit: 'kg',
-      batchesPerPack: 8,
+      packQty: 48,
+      packUnit: 'litros',
+      batchesPerPack: 7,
     },
     gravel0: {
       id: 'gravel0',
@@ -126,7 +126,7 @@ export const DEFAULT_STATE: AppState = {
       id: 'bloco14',
       name: 'Bloco de 14',
       label: '14 × 19 × 39',
-      blocksPerBatch: 8,
+      blocksPerBatch: 9,
       salePrice: 3.6,
       extraCost: 0,
       freightPercent: 0,
@@ -135,19 +135,23 @@ export const DEFAULT_STATE: AppState = {
     canaleta: {
       id: 'canaleta',
       name: 'Bloco Canaleta',
-      label: 'Canaleta de 14',
-      blocksPerBatch: 8,
+      label: 'Canaleta de 14 · 6 traços/saco',
+      blocksPerBatch: 9,
       salePrice: 3.6,
       extraCost: 0,
       freightPercent: 0,
-      recipe: { ...DEFAULT_RECIPE },
+      cementBatchesPerPack: 6,
+      recipe: {
+        ...DEFAULT_RECIPE,
+        cement: 8, // 48 L / 6 traços = 8 L
+      },
     },
     bloco9: {
       id: 'bloco9',
       name: 'Bloco de 9',
       label: '9 × 19 × 39',
-      blocksPerBatch: null,
-      salePrice: null,
+      blocksPerBatch: 10,
+      salePrice: 2.8,
       extraCost: 0,
       freightPercent: 0,
       recipe: { ...DEFAULT_RECIPE },
@@ -220,13 +224,17 @@ export const unitMultiplier = (unit: string): number => {
 export function calculateMaterialCost(
   materials: AppState['materials'],
   id: MaterialId,
-  amount: number
+  amount: number,
+  productCementBatches?: number
 ): number {
   const m = materials[id];
   if (!m) return 0;
   if (id === 'cement') {
-    const batches = m.batchesPerPack && m.batchesPerPack > 0 ? m.batchesPerPack : 8;
-    return (m.price / batches) * (amount / 6);
+    const sackLiters = m.packQty && m.packQty > 0 ? m.packQty : 48;
+    if (productCementBatches && productCementBatches > 0) {
+      return m.price / productCementBatches;
+    }
+    return (m.price / sackLiters) * amount;
   }
   const packSize = m.packQty * unitMultiplier(m.packUnit);
   if (packSize <= 0) return 0;
@@ -246,7 +254,7 @@ export function calculateProduct(
     return {
       id: mid,
       amount,
-      cost: calculateMaterialCost(materials, mid, amount),
+      cost: calculateMaterialCost(materials, mid, amount, product.cementBatchesPerPack),
     };
   });
 
@@ -320,11 +328,14 @@ export function calculateProduction(
       ? totalRevenue - totalCost
       : null;
 
-  const cementBatchesPerPack = materials.cement.batchesPerPack || 8;
-  const cementUsagePerBatch = product.recipe.cement ?? 6;
+  const sackLiters = materials.cement.packQty || 48;
+  const cementUsagePerBatch =
+    product.cementBatchesPerPack && product.cementBatchesPerPack > 0
+      ? sackLiters / product.cementBatchesPerPack
+      : product.recipe.cement ?? (sackLiters / 7);
   const cementBags =
-    isValid && cementBatchesPerPack > 0
-      ? (totalBatches / cementBatchesPerPack) * (cementUsagePerBatch / 6)
+    isValid && sackLiters > 0
+      ? (totalBatches * cementUsagePerBatch) / sackLiters
       : null;
 
   return {
@@ -365,8 +376,18 @@ export function loadState(): AppState {
         if (isNonNegative(m.price)) out.materials[id].price = m.price;
         if (isPositive(m.packQty)) out.materials[id].packQty = m.packQty;
       }
-      if (id === 'cement' && isPositive(m.batchesPerPack)) {
-        out.materials[id].batchesPerPack = m.batchesPerPack;
+      if (id === 'cement') {
+        if (m.packQty === 50 || m.packUnit === 'kg' || !m.packQty) {
+          out.materials.cement.packQty = 48;
+          out.materials.cement.packUnit = 'litros';
+        } else if (isPositive(m.packQty)) {
+          out.materials.cement.packQty = m.packQty;
+        }
+        if (m.batchesPerPack === 8 || !m.batchesPerPack) {
+          out.materials[id].batchesPerPack = 7;
+        } else if (isPositive(m.batchesPerPack)) {
+          out.materials[id].batchesPerPack = m.batchesPerPack;
+        }
       }
     });
 
@@ -377,13 +398,38 @@ export function loadState(): AppState {
     PRODUCT_IDS.forEach((id) => {
       const p = parsed.products?.[id];
       if (!p) return;
-      if (
+      if (id === 'bloco14' && p.blocksPerBatch === 8) {
+        out.products[id].blocksPerBatch = 9;
+      } else if (id === 'canaleta' && (p.blocksPerBatch === 8 || p.blocksPerBatch === null)) {
+        out.products[id].blocksPerBatch = 9;
+      } else if (
         p.blocksPerBatch === null ||
         (Number.isInteger(p.blocksPerBatch) && isPositive(p.blocksPerBatch))
       ) {
         out.products[id].blocksPerBatch = p.blocksPerBatch;
       }
-      if (p.salePrice === null || isNonNegative(p.salePrice)) {
+
+      if (id === 'canaleta') {
+        if (
+          p.cementBatchesPerPack === undefined ||
+          p.cementBatchesPerPack === null ||
+          p.cementBatchesPerPack === 7 ||
+          p.cementBatchesPerPack === 8
+        ) {
+          out.products[id].cementBatchesPerPack = 6;
+        } else if (isPositive(p.cementBatchesPerPack)) {
+          out.products[id].cementBatchesPerPack = p.cementBatchesPerPack;
+        }
+      } else if (isPositive(p.cementBatchesPerPack)) {
+        out.products[id].cementBatchesPerPack = p.cementBatchesPerPack;
+      }
+
+      if (id === 'bloco9' && (p.blocksPerBatch === null || p.blocksPerBatch === 8)) {
+        out.products[id].blocksPerBatch = 10;
+        if (p.salePrice === null || !isNonNegative(p.salePrice)) {
+          out.products[id].salePrice = 2.8;
+        }
+      } else if (p.salePrice === null || isNonNegative(p.salePrice)) {
         out.products[id].salePrice = p.salePrice;
       }
       if (isNonNegative(p.extraCost)) {
@@ -398,7 +444,13 @@ export function loadState(): AppState {
       }
       MATERIAL_IDS.forEach((mid) => {
         if (isNonNegative(p.recipe?.[mid])) {
-          out.products[id].recipe[mid] = p.recipe[mid];
+          if (mid === 'cement' && p.recipe[mid] === 6) {
+            if (id === 'canaleta') out.products[id].recipe[mid] = 8;
+            else if (id === 'bloco14' || id === 'bloco9') out.products[id].recipe[mid] = 48 / 7;
+            else out.products[id].recipe[mid] = p.recipe[mid];
+          } else {
+            out.products[id].recipe[mid] = p.recipe[mid];
+          }
         } else if (mid === 'slurry') {
           if (id === 'paver16') out.products[id].recipe.slurry = 1.0;
           else if (id === 'pingadeira') out.products[id].recipe.slurry = 1.2;
@@ -471,6 +523,15 @@ export function generateCsv(state: AppState, sim: ProductionSim): string {
       p.blocksPerBatch ?? '',
       'blocos',
     ]);
+    if (p.cementBatchesPerPack) {
+      rows.push([
+        'Produto',
+        p.name,
+        'Rendimento do cimento',
+        p.cementBatchesPerPack,
+        'traços/saco',
+      ]);
+    }
     rows.push([
       'Produto',
       p.name,

@@ -164,7 +164,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
       <div className="bg-[#f0f8f4] border border-[#e1efe6] rounded-2xl p-4 flex items-start gap-3 text-[12px] text-[#678275] leading-relaxed">
         <Info size={18} className="text-[#16805a] shrink-0 mt-0.5" />
         <span>
-          O Bloco de 9 permanece com o rendimento pendente até você informar. As receitas de venda apresentadas são projeções.
+          Rendimento de 7 traços por saco nos Blocos de 14 (9 blocos/traço) e 9 (10 blocos/traço), e 6 traços por saco na Canaleta (9 canaletas/traço). As receitas de venda apresentadas são projeções.
         </span>
       </div>
     </div>

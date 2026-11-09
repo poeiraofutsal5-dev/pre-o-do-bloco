@@ -71,7 +71,12 @@ export default function App() {
 
   const handleUpdateProduct = (
     id: ProductId,
-    field: 'blocksPerBatch' | 'salePrice' | 'extraCost' | 'freightPercent',
+    field:
+      | 'blocksPerBatch'
+      | 'salePrice'
+      | 'extraCost'
+      | 'freightPercent'
+      | 'cementBatchesPerPack',
     value: number | null
   ) => {
     setState((prev) => {
@@ -84,6 +89,8 @@ export default function App() {
         next.products[id].extraCost = value ?? 0;
       } else if (field === 'freightPercent') {
         next.products[id].freightPercent = value ?? 0;
+      } else if (field === 'cementBatchesPerPack') {
+        next.products[id].cementBatchesPerPack = value && value > 0 ? value : undefined;
       }
       return next;
     });
@@ -113,7 +120,7 @@ export default function App() {
       } else if (field === 'packQty') {
         next.materials[id].packQty = value ?? 1;
       } else if (field === 'batchesPerPack' && id === 'cement') {
-        next.materials[id].batchesPerPack = value ?? 8;
+        next.materials[id].batchesPerPack = value ?? 7;
       }
       return next;
     });

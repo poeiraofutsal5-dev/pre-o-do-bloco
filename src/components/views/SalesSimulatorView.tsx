@@ -22,7 +22,12 @@ interface SalesSimulatorViewProps {
   onSelectProduct: (id: ProductId) => void;
   onUpdateProduct: (
     id: ProductId,
-    field: 'blocksPerBatch' | 'salePrice' | 'extraCost' | 'freightPercent',
+    field:
+      | 'blocksPerBatch'
+      | 'salePrice'
+      | 'extraCost'
+      | 'freightPercent'
+      | 'cementBatchesPerPack',
     value: number | null
   ) => void;
   onUpdateRecipe: (
@@ -282,7 +287,7 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[11.5px] font-bold text-[#4c6257] block">
                   Produzidos por batelada
@@ -297,6 +302,26 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
                 />
                 <p className="text-[10px] text-[#91a49a] leading-tight">
                   Altere livremente.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11.5px] font-bold text-[#4c6257] block">
+                  Traços por saco (cimento)
+                </label>
+                <NumericInput
+                  value={currentProduct.cementBatchesPerPack ?? state.materials.cement.batchesPerPack ?? 7}
+                  onChange={(val) => onUpdateProduct(selectedProductId, 'cementBatchesPerPack', val)}
+                  isInteger={true}
+                  min={1}
+                  suffix="traços"
+                  placeholder="7"
+                  ariaLabel="Traços por saco de cimento para este produto"
+                />
+                <p className="text-[10px] text-[#91a49a] leading-tight">
+                  {currentProduct.cementBatchesPerPack
+                    ? `Específico: ${currentProduct.cementBatchesPerPack} traços/saco`
+                    : `Padrão geral: ${state.materials.cement.batchesPerPack ?? 7} traços/saco`}
                 </p>
               </div>
 
@@ -380,7 +405,12 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
               {MATERIAL_IDS.map((mid) => {
                 const mat = state.materials[mid];
                 const amount = currentProduct.recipe[mid] ?? 0;
-                const cost = calculateMaterialCost(state.materials, mid, amount);
+                const cost = calculateMaterialCost(
+                  state.materials,
+                  mid,
+                  amount,
+                  currentProduct.cementBatchesPerPack
+                );
 
                 return (
                   <div
@@ -393,7 +423,13 @@ export const SalesSimulatorView: React.FC<SalesSimulatorViewProps> = ({
                       </strong>
                       <span className="text-[10px] text-[#9caaa2]">
                         {mid === 'cement'
-                          ? 'Volume; custo calculado pelo rendimento do saco'
+                          ? currentProduct.cementBatchesPerPack
+                            ? `Rendimento: ${currentProduct.cementBatchesPerPack} traços por saco de 48 L (${brl(
+                                state.materials.cement.price / currentProduct.cementBatchesPerPack
+                              )}/traço)`
+                            : `Consumo: ${num(amount, 2)} L (${brl(cost)}) do saco de ${
+                                state.materials.cement.packQty || 48
+                              } L`
                           : mid === 'slurry'
                           ? selectedProductId === 'paver16'
                             ? '100 ml por paver (1 L por batelada de 10)'

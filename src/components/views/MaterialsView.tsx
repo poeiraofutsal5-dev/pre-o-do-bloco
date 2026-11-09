@@ -34,8 +34,12 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
   onUpdateMaintenance,
   onNavigate,
 }) => {
-  const cementCostBase = calculateMaterialCost(state.materials, 'cement', 6);
-  const slurryCostBase = calculateMaterialCost(state.materials, 'slurry', 6.5);
+  const cementCostBase = calculateMaterialCost(
+    state.materials,
+    'cement',
+    48 / (state.materials.cement.batchesPerPack || 7)
+  );
+  const slurryCostBase = calculateMaterialCost(state.materials, 'slurry', 6.0);
   const p14Calc = calculateProduct(
     state.products.bloco14,
     state.materials,
@@ -141,16 +145,16 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
               Cimento: rendimento por saco
             </h2>
             <p className="text-[11.5px] text-[#869c91] mt-1 mb-4 leading-relaxed">
-              O consumo-base é 6 litros por batelada e 8 bateladas por saco. O custo se ajusta proporcionalmente ao volume da receita.
+              Cada saco possui 48 litros (R$ 1,125/L). 1 saco rende 7 traços nos blocos (~6,86 L/traço), 6 na canaleta (8 L/traço), 12 no paver (4 L) e 9,6 na pingadeira (5 L).
             </p>
 
             <div className="space-y-1.5 mb-5">
               <label className="text-[11.5px] font-bold text-[#4c6257] block">
-                Bateladas por saco
+                Bateladas por saco (blocos)
               </label>
               <NumericInput
                 value={state.materials.cement.batchesPerPack}
-                onChange={(val) => onUpdateMaterial('cement', 'batchesPerPack', val ?? 8)}
+                onChange={(val) => onUpdateMaterial('cement', 'batchesPerPack', val ?? 7)}
                 suffix="bateladas"
                 isInteger={true}
                 min={1}
@@ -160,7 +164,7 @@ export const MaterialsView: React.FC<MaterialsViewProps> = ({
           </div>
 
           <div className="p-3.5 rounded-xl bg-[#eff8f3] border border-[#d6ecde] flex items-center justify-between text-[11.5px] text-[#557867]">
-            <span>Custo para 6 L de cimento</span>
+            <span>Custo por traço ({state.materials.cement.batchesPerPack ?? 7} traços/saco)</span>
             <strong className="text-[14px] font-extrabold text-[#157a55]">
               {brl(cementCostBase)}
             </strong>

@@ -42,6 +42,7 @@ export interface Product {
   salePrice: number | null;
   extraCost: number;
   freightPercent?: number;
+  cementBatchesPerPack?: number;
   recipe: RecipeMap;
 }
 
